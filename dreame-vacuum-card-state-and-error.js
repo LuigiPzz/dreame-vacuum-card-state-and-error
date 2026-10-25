@@ -44,9 +44,21 @@ const CARD_STYLES = `
     transition: background 0.3s ease, border-color 0.3s ease;
   }
 
-  .v {
-    height: 180px;
+  .x {
     flex: none;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding-bottom: 6px;
+    box-sizing: border-box;
+    width: 100%;
+    z-index: 2;
+  }
+
+  .v {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -54,17 +66,7 @@ const CARD_STYLES = `
     width: 100%;
   }
 
-  .x {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-height: 70px;
-    padding-top: 6px;
-    box-sizing: border-box;
-    width: 100%;
-  }
+  
 
   .e {
     max-width: 200px;
@@ -595,15 +597,21 @@ class DreameVacuumCard extends HTMLElement {
     this._lastStateString = currentStateString;
 
     let visualHtml = '';
-    let bottomHtml = '';
+    let topHtml = '';
 
     if (activeError) {
-      visualHtml = `<img src="${activeError.img}" alt="${activeError.msg}" class="e" />`;
-      bottomHtml = `
+      topHtml = `
         <span class="b">Errore</span>
         <p class="m">${activeError.msg}</p>
       `;
+      visualHtml = `<img src="${activeError.img}" alt="${activeError.msg}" class="e" />`;
     } else if (robotState === 'returning') {
+      topHtml = `
+        <span class="k">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>
+          Ritorno alla base
+        </span>
+      `;
       visualHtml = `
         <div class="returning-wrap">
           <img src="${IMAGES.ROBOT_RETURNING}" alt="Robot in ritorno alla base" width="124" />
@@ -611,6 +619,12 @@ class DreameVacuumCard extends HTMLElement {
         </div>
       `;
     } else if (robotState === 'docked') {
+      topHtml = `
+        <span class="k">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+          In base
+        </span>
+      `;
       visualHtml = `
         <div class="dock-circle">
           <img src="${IMAGES.ROBOT_DOCKED}" alt="Robot in base" width="96" class="robot-docked-img" />
@@ -618,19 +632,16 @@ class DreameVacuumCard extends HTMLElement {
         </div>
       `;
     } else if (robotState === 'paused') {
-      visualHtml = `
-        <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pausa" width="124" class="robot-paused" />
-      `;
-      bottomHtml = `
+      topHtml = `
         <span class="k">
           <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
           In pausa
         </span>
       `;
-    } else {
       visualHtml = `
-        <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pulizia" width="124" class="robot-cleaning-pulse" />
+        <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pausa" width="124" class="robot-paused" />
       `;
+    } else {
       let modeIconSvg = '';
       if (cleaningMode.icon === 'both') {
         modeIconSvg = `
@@ -646,19 +657,22 @@ class DreameVacuumCard extends HTMLElement {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/></svg>
         `;
       }
-      bottomHtml = `
+      topHtml = `
         <span class="k" id="mode-chip">
           ${modeIconSvg}
           ${cleaningMode.label}
         </span>
+      `;
+      visualHtml = `
+        <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pulizia" width="124" class="robot-cleaning-pulse" />
       `;
     }
 
     this.shadowRoot.innerHTML = `
       <style>${CARD_STYLES}</style>
       <div class="vacuum-card" id="card-container">
+        <div class="x">${topHtml}</div>
         <div class="v">${visualHtml}</div>
-        <div class="x">${bottomHtml}</div>
       </div>
     `;
 
