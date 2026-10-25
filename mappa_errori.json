@@ -1,0 +1,53 @@
+{
+  "entita": {
+    "errore": "sensor.dreame_l10_ultra_errore",
+    "modalita_pulizia": "select.dreame_l10_ultra_modalita_pulizia"
+  },
+  "nota": "Lo stato di sensor.dreame_l10_ultra_errore e' il testo tradotto; il codice numerico e' nell'attributo 'value'. Usare 'value' nella card.",
+  "errori": [
+    {
+      "id": "panni_staccati",
+      "chiave": "mop_removed",
+      "codici": [
+        69,
+        70
+      ],
+      "messaggio": "I panni si sono staccati",
+      "immagine": "images/errore_panni_staccati.png",
+      "certezza": "alta"
+    },
+    {
+      "id": "ruote_sollevate",
+      "chiave": "drop / drop_repeat",
+      "codici": [
+        1,
+        6
+      ],
+      "messaggio": "Le ruote non sono a contatto con il suolo",
+      "immagine": "images/errore_ruote_sollevate.png",
+      "certezza": "alta"
+    },
+    {
+      "id": "zona_non_raggiungibile",
+      "chiave": "route",
+      "codici": [
+        61,
+        62
+      ],
+      "messaggio": "Zona non raggiungibile",
+      "immagine": "images/errore_zona_non_raggiungibile.png",
+      "certezza": "ipotesi"
+    },
+    {
+      "id": "asse_lavaggio_mocio",
+      "chiave": "washboard_not_working (alternativa: washboard_level)",
+      "codici": [
+        124,
+        119
+      ],
+      "messaggio": "Pulire l'asse di lavaggio del mocio",
+      "immagine": "images/errore_asse_lavaggio_mocio.png",
+      "certezza": "ipotesi"
+    }
+  ]
+}
