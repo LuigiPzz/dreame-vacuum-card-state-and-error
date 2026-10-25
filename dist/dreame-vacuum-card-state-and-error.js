@@ -156,20 +156,51 @@ const CARD_STYLES = `
   }
 
   .robot-cleaning-pulse {
-    animation: cleanFloat 4s ease-in-out infinite;
-  }
-
-  .robot-paused {
-    opacity: 0.75;
-    filter: grayscale(30%);
+    animation: cleanFloat 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    transform-origin: center center;
+    will-change: transform;
   }
 
   @keyframes cleanFloat {
-    0%, 100% {
-      transform: translateY(0);
+    /* 1. Avanti e dietro dritto */
+    0% {
+      transform: rotate(0deg) translateY(0);
     }
-    50% {
-      transform: translateY(-3px);
+    8% {
+      transform: rotate(0deg) translateY(-14px);
+    }
+    16% {
+      transform: rotate(0deg) translateY(0);
+    }
+
+    /* 2. Avanti e dietro a 30 gradi a sinistra */
+    24% {
+      transform: rotate(-30deg) translateY(0);
+    }
+    34% {
+      transform: rotate(-30deg) translateY(-14px);
+    }
+    44% {
+      transform: rotate(-30deg) translateY(0);
+    }
+
+    /* 3. Transizione verso destra */
+    54% {
+      transform: rotate(0deg) translateY(0);
+    }
+    64% {
+      transform: rotate(30deg) translateY(0);
+    }
+    74% {
+      transform: rotate(30deg) translateY(-14px);
+    }
+    84% {
+      transform: rotate(30deg) translateY(0);
+    }
+
+    /* 4. Ritorno al centro */
+    94%, 100% {
+      transform: rotate(0deg) translateY(0);
     }
   }
 `;
