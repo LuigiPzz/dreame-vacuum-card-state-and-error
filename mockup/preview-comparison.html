@@ -130,7 +130,7 @@
       font-family: monospace;
     }
   </style>
-  <script type="module" src="../dreame-vacuum-card.js"></script>
+  <script type="module" src="../dreame-vacuum-card-state-and-error-state-and-error.js"></script>
 </head>
 <body>
 
@@ -202,7 +202,7 @@
     let cardEl = null;
 
     function initCard() {
-      cardEl = document.createElement('dreame-vacuum-card');
+      cardEl = document.createElement('dreame-vacuum-card-state-and-error');
       cardEl.setConfig({
         entity: 'vacuum.dreame_l10_ultra',
         error_entity: 'sensor.dreame_l10_ultra_errore',

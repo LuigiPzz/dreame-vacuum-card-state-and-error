@@ -240,7 +240,7 @@ class DreameVacuumCard extends LitElement {
   }
 
   static getConfigElement() {
-    return document.createElement("dreame-vacuum-card-editor");
+    return document.createElement("dreame-vacuum-card-state-and-error-editor");
   }
 
   static getStubConfig() {
@@ -660,12 +660,15 @@ class DreameVacuumCard extends LitElement {
   `;
 }
 
-customElements.define("dreame-vacuum-card-editor", DreameVacuumCardEditor);
-customElements.define("dreame-vacuum-card", DreameVacuumCard);
+customElements.define("dreame-vacuum-card-state-and-error-editor", DreameVacuumCardEditor);
+customElements.define("dreame-vacuum-card-state-and-error", DreameVacuumCard);
+if (!customElements.get("dreame-vacuum-state-and-error-card")) {
+  customElements.define("dreame-vacuum-state-and-error-card", class extends DreameVacuumCard {});
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({
-  type: "dreame-vacuum-card",
-  name: "Dreame Vacuum Card",
+  type: "dreame-vacuum-card-state-and-error",
+  name: "Dreame Vacuum Card (State & Error)",
   description: "Card minimalista per robot aspirapolvere Dreame con gestione stati, errori e modalità pulizia"
 });

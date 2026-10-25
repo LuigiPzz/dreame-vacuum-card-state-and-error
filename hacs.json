@@ -1,5 +1,5 @@
 {
-  "name": "Dreame Vacuum Card",
+  "name": "Dreame Vacuum Card (State & Error)",
   "render_readme": true,
-  "filename": "dreame-vacuum-card.js"
+  "filename": "dreame-vacuum-card-state-and-error.js"
 }

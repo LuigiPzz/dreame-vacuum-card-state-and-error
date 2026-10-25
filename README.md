@@ -44,7 +44,7 @@ Da verificare: quale testo compare per "zona non raggiungibile" e per l'asse di 
 
 ## Stato del Progetto: Completato ✅
 La card definitiva pronta all'uso è contenuta in:
-`dreame-vacuum-card.js`
+`dreame-vacuum-card-state-and-error.js`
 
 ### Caratteristiche Implementate
 1. **Dimensioni identiche alla Minimal Washer Card**:
@@ -77,15 +77,15 @@ La card definitiva pronta all'uso è contenuta in:
 
 ## Installazione in Home Assistant
 
-1. Copia `dreame-vacuum-card.js` nella cartella `/config/www/` del tuo Home Assistant (es. `/config/www/dreame-vacuum-card.js`).
+1. Copia `dreame-vacuum-card-state-and-error.js` nella cartella `/config/www/` del tuo Home Assistant (es. `/config/www/dreame-vacuum-card-state-and-error.js`).
 2. In Home Assistant vai su **Impostazioni** > **Dashboard** > menu tre puntini in alto a destra > **Risorse**.
 3. Clicca su **Aggiungi Risorsa**:
-   - **URL**: `/local/dreame-vacuum-card.js`
+   - **URL**: `/local/dreame-vacuum-card-state-and-error.js`
    - **Tipo di risorsa**: `Modulo JavaScript`
 4. Nella tua Dashboard (in particolare in modalità Sezioni o Standard), aggiungi una scheda personalizzata:
 
 ```yaml
-type: custom:dreame-vacuum-card
+type: custom:dreame-vacuum-card-state-and-error
 entity: vacuum.dreame_l10_ultra
 error_entity: sensor.dreame_l10_ultra_errore
 cleaning_mode_entity: select.dreame_l10_ultra_modalita_pulizia
