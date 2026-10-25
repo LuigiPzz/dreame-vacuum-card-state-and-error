@@ -48,6 +48,18 @@
       "messaggio": "Pulire l'asse di lavaggio del mocio",
       "immagine": "images/errore_asse_lavaggio_mocio.png",
       "certezza": "ipotesi"
+    },
+    {
+      "id": "serbatoio_acqua_pulita",
+      "chiave": "waterbox_empty / clean_tank_level / clean_water_tank",
+      "codici": [
+        105,
+        107,
+        213
+      ],
+      "messaggio": "Si prega di riempire il serbatoio dell'acqua pulita",
+      "immagine": "images/errore_serbatoio_acqua_pulita.png",
+      "certezza": "alta"
     }
   ]
 }
