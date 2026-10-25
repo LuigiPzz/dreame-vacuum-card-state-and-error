@@ -371,19 +371,19 @@ class DreameVacuumCardEditor extends HTMLElement {
             ⏸️ In pausa
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_mops' ? 'active' : ''}" data-mode="err_mops">
-            🚨 Errore: Panni staccati (69/70)
+            🚨 Errore: Panni staccati
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_wheels' ? 'active' : ''}" data-mode="err_wheels">
-            🚨 Errore: Ruote sollevate (1/6)
+            🚨 Errore: Ruote sollevate
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_route' ? 'active' : ''}" data-mode="err_route">
-            🚨 Errore: Zona non raggiungibile (61/62)
+            🚨 Errore: Zona non raggiungibile
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_washboard' ? 'active' : ''}" data-mode="err_washboard">
-            🚨 Errore: Asse lavaggio mocio (124/119)
+            🚨 Errore: Asse lavaggio mocio
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_clean_water' ? 'active' : ''}" data-mode="err_clean_water">
-            🚨 Errore: Acqua pulita (105)
+            🚨 Errore: Acqua pulita
           </button>
         </div>
       </div>
