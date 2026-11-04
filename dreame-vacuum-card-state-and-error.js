@@ -145,6 +145,48 @@ const CARD_STYLES = `
     filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
   }
 
+    .vacuum-visual-sweep {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  .sweep-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .sweep-robot-wrap {
+    position: relative;
+    width: 124px;
+    height: 124px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2;
+  }
+
+  .sweep-robot-wrap::before {
+    content: "";
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    right: 2px;
+    bottom: 2px;
+    border-radius: 50%;
+    background: #161616;
+    z-index: -1;
+  }
+
   .robot-cleaning-pulse {
     animation: cleanFloat 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     transform-origin: center center;
@@ -414,6 +456,14 @@ class DreameVacuumCard extends HTMLElement {
     this._config = null;
     this._hass = null;
     this._lastStateString = '';
+    this._particleAnimationId = null;
+  }
+
+  disconnectedCallback() {
+    if (this._particleAnimationId) {
+      cancelAnimationFrame(this._particleAnimationId);
+      this._particleAnimationId = null;
+    }
   }
 
   static getGridOptions() {
@@ -739,9 +789,20 @@ class DreameVacuumCard extends HTMLElement {
           ${cleaningMode.label}
         </span>
       `;
-      visualHtml = `
-        <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pulizia" width="124" class="robot-cleaning-pulse" />
-      `;
+      if (cleaningMode.icon === 'sweep') {
+        visualHtml = `
+          <div class="vacuum-visual-sweep" id="sweepContainer">
+            <canvas class="sweep-canvas" id="sweepCanvas"></canvas>
+            <div class="sweep-robot-wrap robot-cleaning-pulse" id="sweepRobot">
+              <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in aspirazione" width="124" />
+            </div>
+          </div>
+        `;
+      } else {
+        visualHtml = `
+          <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pulizia" width="124" class="robot-cleaning-pulse" />
+        `;
+      }
     }
 
     this.shadowRoot.innerHTML = `
@@ -766,6 +827,156 @@ class DreameVacuumCard extends HTMLElement {
         this._handleMoreInfo(this._config.cleaning_mode_entity);
       });
     }
+
+    if (robotState === 'cleaning' && cleaningMode.icon === 'sweep') {
+      this._initSweepParticles();
+    } else if (this._particleAnimationId) {
+      cancelAnimationFrame(this._particleAnimationId);
+      this._particleAnimationId = null;
+    }
+  }
+
+  _initSweepParticles() {
+    if (this._particleAnimationId) {
+      cancelAnimationFrame(this._particleAnimationId);
+      this._particleAnimationId = null;
+    }
+
+    const canvas = this.shadowRoot.getElementById('sweepCanvas');
+    const container = this.shadowRoot.getElementById('sweepContainer');
+    const robotElem = this.shadowRoot.getElementById('sweepRobot');
+    if (!canvas || !container || !robotElem) return;
+
+    const ctx = canvas.getContext('2d');
+    const resize = () => {
+      canvas.width = container.clientWidth || 300;
+      canvas.height = container.clientHeight || 200;
+    };
+    resize();
+
+    const MAX_PARTICLES = 30;
+    const SPEED_MULT = 0.32;
+    const BASE_SIZE = 0.8;
+    const ROBOT_RADIUS = 58;
+
+    const hues = [
+      { r: 56, g: 189, b: 248 },
+      { r: 125, g: 211, b: 252 },
+      { r: 186, g: 230, b: 253 }
+    ];
+
+    class Particle {
+      constructor() {
+        this.reset();
+      }
+      reset() {
+        let angle;
+        if (Math.random() < 0.88) {
+          angle = Math.PI * (0.85 + Math.random() * 1.30);
+        } else {
+          angle = Math.random() < 0.5 ? Math.random() * 0.4 : Math.PI - Math.random() * 0.4;
+        }
+
+        const W = canvas.width || 300;
+        const H = canvas.height || 200;
+        const spawnDist = ROBOT_RADIUS + 18 + Math.random() * 65;
+
+        this.x = W / 2 + Math.cos(angle) * spawnDist;
+        this.y = H / 2 + Math.sin(angle) * spawnDist;
+        this.px = this.x;
+        this.py = this.y;
+
+        this.size = BASE_SIZE * (0.8 + Math.random() * 0.4);
+        this.speed = (0.35 + Math.random() * 0.35) * SPEED_MULT;
+        this.alpha = 0.05 + Math.random() * 0.15;
+        this.maxAlpha = 0.70 + Math.random() * 0.25;
+        this.color = hues[Math.floor(Math.random() * hues.length)];
+        this.life = 0;
+        this.maxLife = 90 + Math.random() * 50;
+      }
+      update(rc) {
+        this.px = this.x;
+        this.py = this.y;
+
+        const suctionTarget = { x: rc.x, y: rc.y - 12 };
+        const dx = suctionTarget.x - this.x;
+        const dy = suctionTarget.y - this.y;
+        const distToCenter = Math.sqrt((rc.x - this.x) ** 2 + (rc.y - this.y) ** 2);
+        const distToSuction = Math.sqrt(dx * dx + dy * dy);
+
+        if (distToCenter <= ROBOT_RADIUS + 2) {
+          this.reset();
+          return;
+        }
+
+        const accel = 0.9 + Math.min(1.8, (45 / Math.max(10, distToCenter - ROBOT_RADIUS)));
+        const vx = (dx / Math.max(1, distToSuction)) * this.speed * accel;
+        const vy = (dy / Math.max(1, distToSuction)) * this.speed * accel;
+
+        this.x += vx;
+        this.y += vy;
+        this.life++;
+
+        const margin = distToCenter - ROBOT_RADIUS;
+        if (margin > 12) {
+          this.alpha = Math.min(this.maxAlpha, this.alpha + 0.035);
+        } else {
+          this.alpha = Math.max(0, this.alpha * (margin / 12));
+        }
+
+        if (this.alpha <= 0 || this.life > this.maxLife) {
+          this.reset();
+        }
+      }
+      draw(rc) {
+        const dist = Math.sqrt((rc.x - this.x) ** 2 + (rc.y - this.y) ** 2);
+        if (dist <= ROBOT_RADIUS) return;
+
+        ctx.save();
+        ctx.globalAlpha = this.alpha;
+        ctx.beginPath();
+        ctx.moveTo(this.px, this.py);
+        ctx.lineTo(this.x, this.y);
+        ctx.strokeStyle = `rgba(${this.color.r}, ${this.color.g}, ${this.color.b}, ${this.alpha * 0.7})`;
+        ctx.lineWidth = Math.max(0.5, this.size * 0.8);
+        ctx.lineCap = 'round';
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, Math.max(0.5, this.size), 0, Math.PI * 2);
+        ctx.fillStyle = `rgb(${this.color.r}, ${this.color.g}, ${this.color.b})`;
+        ctx.shadowColor = 'rgba(56, 189, 248, 0.6)';
+        ctx.shadowBlur = 2;
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    const particles = Array.from({ length: MAX_PARTICLES }, () => new Particle());
+
+    const animate = () => {
+      if (!this.isConnected || !this.shadowRoot.contains(canvas)) {
+        this._particleAnimationId = null;
+        return;
+      }
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const robotRect = robotElem.getBoundingClientRect();
+      const contRect = container.getBoundingClientRect();
+      const rc = {
+        x: (robotRect.left - contRect.left) + robotRect.width / 2,
+        y: (robotRect.top - contRect.top) + robotRect.height / 2
+      };
+
+      particles.forEach(p => {
+        p.update(rc);
+        p.draw(rc);
+      });
+
+      this._particleAnimationId = requestAnimationFrame(animate);
+    };
+
+    this._particleAnimationId = requestAnimationFrame(animate);
   }
 }
 
