@@ -291,6 +291,12 @@ class DreameVacuumCardEditor extends HTMLElement {
         selector: { entity: { domain: ['sensor'] } }
       },
       {
+        name: 'water_warning_entity',
+        label: 'Sensore Avviso Acqua Scarsa (es. sensor.dreame_l10_ultra_avviso_acqua_scarsa)',
+        required: false,
+        selector: { entity: { domain: ['sensor'] } }
+      },
+      {
         name: 'cleaning_mode_entity',
         label: 'Selettore Modalità Pulizia (es. select.dreame_l10_ultra_modalita_pulizia)',
         required: false,
@@ -441,6 +447,7 @@ class DreameVacuumCard extends HTMLElement {
     return {
       entity: 'vacuum.dreame_l10_ultra',
       error_entity: 'sensor.dreame_l10_ultra_errore',
+      water_warning_entity: 'sensor.dreame_l10_ultra_avviso_acqua_scarsa',
       cleaning_mode_entity: 'select.dreame_l10_ultra_modalita_pulizia'
     };
   }
@@ -516,6 +523,25 @@ class DreameVacuumCard extends HTMLElement {
     };
   }
 
+  _parseWaterWarning(waterObj) {
+    if (!waterObj) return null;
+    const rawVal = waterObj.attributes?.value ?? waterObj.attributes?.code ?? waterObj.state;
+    const num = parseInt(rawVal, 10);
+    const text = String(waterObj.state || '').trim().toLowerCase();
+
+    // 0: NO_WARNING, "nessun avviso", "no_warning", "ok", "none", "unknown", "-1"
+    if (num === 0 || num === -1 || (isNaN(num) && (text === '0' || text === 'nessun avviso' || text === 'no_warning' || text === 'ok' || text === 'none' || text === 'sconosciuto' || text === 'unknown' || text === ''))) {
+      return null;
+    }
+
+    // Codici Dreame LowWaterWarning attivi (1, 2, 3, 4, 5, 6) oppure stringhe di avviso
+    return {
+      key: 'serbatoio_acqua_pulita',
+      msg: "Si prega di riempire il serbatoio dell'acqua pulita",
+      img: IMAGES.ERR_CLEAN_WATER
+    };
+  }
+
   _parseCleaningMode(modeState) {
     if (!modeState) return { label: 'Aspira e lava', icon: 'both' };
 
@@ -586,7 +612,26 @@ class DreameVacuumCard extends HTMLElement {
       const errObj = this._config.error_entity ? this._hass.states[this._config.error_entity] : null;
       const modeObj = this._config.cleaning_mode_entity ? this._hass.states[this._config.cleaning_mode_entity] : null;
 
+      // Risoluzione sensore avviso acqua scarsa (configurato o auto-rilevato)
+      let waterEntityId = this._config.water_warning_entity;
+      if (!waterEntityId && this._config.error_entity) {
+        const inf1 = this._config.error_entity.replace(/_errore$/, '_avviso_acqua_scarsa');
+        const inf2 = this._config.error_entity.replace(/_error$/, '_low_water_warning');
+        if (this._hass.states[inf1]) waterEntityId = inf1;
+        else if (this._hass.states[inf2]) waterEntityId = inf2;
+      } else if (!waterEntityId && this._config.entity) {
+        const prefix = this._config.entity.replace(/^vacuum\./, 'sensor.');
+        const inf1 = prefix + '_avviso_acqua_scarsa';
+        const inf2 = prefix + '_low_water_warning';
+        if (this._hass.states[inf1]) waterEntityId = inf1;
+        else if (this._hass.states[inf2]) waterEntityId = inf2;
+      }
+      const waterObj = waterEntityId ? this._hass.states[waterEntityId] : null;
+
       activeError = this._parseError(errObj);
+      if (!activeError) {
+        activeError = this._parseWaterWarning(waterObj);
+      }
 
       if (vacObj) {
         const s = String(vacObj.state).toLowerCase();
