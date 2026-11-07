@@ -195,16 +195,15 @@ const CARD_STYLES = `
 
   @keyframes cleanDynamic {
     0% { transform: rotate(0deg) translateY(0); }
-    8% { transform: rotate(0deg) translateY(-14px); }
-    16% { transform: rotate(0deg) translateY(0); }
-    24% { transform: rotate(-25deg) translateY(0); }
-    34% { transform: rotate(-25deg) translateY(-14px); }
-    44% { transform: rotate(-25deg) translateY(0); }
-    54% { transform: rotate(0deg) translateY(0); }
-    64% { transform: rotate(25deg) translateY(0); }
-    74% { transform: rotate(25deg) translateY(-14px); }
-    84% { transform: rotate(25deg) translateY(0); }
-    94%, 100% { transform: rotate(0deg) translateY(0); }
+    9% { transform: rotate(0deg) translateY(-14px); }
+    18% { transform: rotate(0deg) translateY(0); }
+    26% { transform: rotate(-22deg) translateY(0); }
+    36% { transform: rotate(-22deg) translateY(-14px); }
+    46% { transform: rotate(-22deg) translateY(0); }
+    58% { transform: rotate(22deg) translateY(0); }
+    68% { transform: rotate(22deg) translateY(-14px); }
+    78% { transform: rotate(22deg) translateY(0); }
+    90%, 100% { transform: rotate(0deg) translateY(0); }
   }
 
   /* Badge Stanza Attuale */
