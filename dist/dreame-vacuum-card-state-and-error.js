@@ -430,6 +430,18 @@ class DreameVacuumCardEditor extends HTMLElement {
         label: 'Sensore Stanza Attuale (es. sensor.dreame_l10_ultra_stanza_attuale)',
         required: false,
         selector: { entity: { domain: ['sensor'] } }
+      },
+      {
+        name: 'base_status_entity',
+        label: 'Sensore Stato Base (es. sensor.dreame_l10_ultra_stato_base_lavaggio)',
+        required: false,
+        selector: { entity: { domain: ['sensor'] } }
+      },
+      {
+        name: 'robot_status_entity',
+        label: 'Sensore Stato Robot (es. sensor.dreame_l10_ultra_stato_robot)',
+        required: false,
+        selector: { entity: { domain: ['sensor'] } }
       }
     ];
   }
@@ -586,7 +598,9 @@ class DreameVacuumCard extends HTMLElement {
       error_entity: 'sensor.dreame_l10_ultra_errore',
       water_warning_entity: 'sensor.dreame_l10_ultra_avviso_acqua_scarsa',
       cleaning_mode_entity: 'select.dreame_l10_ultra_modalita_pulizia',
-      current_room_entity: 'sensor.dreame_l10_ultra_stanza_attuale'
+      current_room_entity: 'sensor.dreame_l10_ultra_stanza_attuale',
+      base_status_entity: 'sensor.dreame_l10_ultra_stato_base_lavaggio',
+      robot_status_entity: 'sensor.dreame_l10_ultra_stato_robot'
     };
   }
 
@@ -716,6 +730,7 @@ class DreameVacuumCard extends HTMLElement {
     let activeError = null;
     let cleaningMode = { label: 'Aspira e lava', icon: 'both' };
     let currentRoom = null;
+    let dockedActivity = null;
 
     const tm = this._config.test_mode;
 
@@ -808,6 +823,21 @@ class DreameVacuumCard extends HTMLElement {
           currentRoom = rState;
         }
       }
+
+      // Rilevamento attivita della base (asciugatura, lavaggio, svuotamento)
+      const baseEntityId = this._config.base_status_entity || 'sensor.dreame_l10_ultra_stato_base_lavaggio';
+      const rStatusEntityId = this._config.robot_status_entity || 'sensor.dreame_l10_ultra_stato_robot';
+      const baseObj = this._hass.states[baseEntityId];
+      const rStatusObj = this._hass.states[rStatusEntityId];
+      const rawBase = String(baseObj?.state || rStatusObj?.state || '').trim().toLowerCase();
+
+      if (rawBase === 'drying' || rawBase.includes('dry') || rawBase.includes('asciug')) {
+        dockedActivity = { key: 'drying', label: 'Asciugatura moci' };
+      } else if (rawBase === 'washing' || rawBase.includes('wash') || rawBase.includes('lavagg')) {
+        dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
+      } else if (rawBase === 'emptying' || rawBase.includes('empty') || rawBase.includes('svuot')) {
+        dockedActivity = { key: 'emptying', label: 'Svuotamento polvere' };
+      }
     }
 
     const currentStateString = JSON.stringify({
@@ -815,7 +845,8 @@ class DreameVacuumCard extends HTMLElement {
       robotState,
       activeError: activeError ? activeError.key : null,
       cleaningMode,
-      currentRoom
+      currentRoom,
+      dockedActivity: dockedActivity ? dockedActivity.key : null
     });
 
     if (this._lastStateString === currentStateString) {
@@ -846,12 +877,35 @@ class DreameVacuumCard extends HTMLElement {
         </div>
       `;
     } else if (robotState === 'docked') {
-      topHtml = `
-        <span class="k">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
-          In base
-        </span>
-      `;
+      if (dockedActivity && dockedActivity.key === 'drying') {
+        topHtml = `
+          <span class="k" style="background: rgba(245, 158, 11, 0.12); border: 1px solid rgba(245, 158, 11, 0.3); color: #fcd34d;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v3m0 12v3M4.22 4.22l2.12 2.12m11.32 11.32l2.12 2.12M1 12h3m16 0h3M4.22 19.78l2.12-2.12m11.32-11.32l2.12-2.12"/><circle cx="12" cy="12" r="4"/></svg>
+            ${dockedActivity.label}
+          </span>
+        `;
+      } else if (dockedActivity && dockedActivity.key === 'washing') {
+        topHtml = `
+          <span class="k" style="background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #7dd3fc;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round"><path d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/></svg>
+            ${dockedActivity.label}
+          </span>
+        `;
+      } else if (dockedActivity && dockedActivity.key === 'emptying') {
+        topHtml = `
+          <span class="k" style="background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.3); color: #d8b4fe;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"><path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg>
+            ${dockedActivity.label}
+          </span>
+        `;
+      } else {
+        topHtml = `
+          <span class="k">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>
+            In base
+          </span>
+        `;
+      }
       visualHtml = `
         <img src="${IMAGES.ROBOT_DOCKED}" alt="Robot in base" class="e dock-img" />
       `;
@@ -906,9 +960,36 @@ class DreameVacuumCard extends HTMLElement {
           <canvas class="sweep-canvas" id="sweepCanvas"></canvas>
           <div class="sweep-robot-wrap robot-cleaning-pulse" id="sweepRobot">
             ${hasMop ? `
-              <div class="mop mop-left" id="mopL"><div class="mop-cloth spin-l"></div></div>
-              <div class="mop mop-right" id="mopR"><div class="mop-cloth spin-r"></div></div>
-              <div class="robot-shadow-over-mops"></div>
+              <svg class="mops-svg-layer" viewBox="0 0 124 124" style="position:absolute; top:0; left:0; width:124px; height:124px; overflow:visible; pointer-events:none; z-index:2;">
+                <defs>
+                  <mask id="robotBodyMask">
+                    <rect x="-60" y="-60" width="244" height="244" fill="white" />
+                    <circle cx="62" cy="62" r="61" fill="black" />
+                  </mask>
+                </defs>
+                <g mask="url(#robotBodyMask)">
+                  <g transform="translate(36, 116)">
+                    <g>
+                      <animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="2.8s" repeatCount="indefinite" />
+                      <circle cx="0" cy="0" r="28" fill="#1b3848" stroke="#38bdf8" stroke-width="1.5" />
+                      <circle cx="0" cy="0" r="24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-dasharray="4,3" />
+                      <circle cx="0" cy="0" r="18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-dasharray="3,2" />
+                      <circle cx="0" cy="0" r="10" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
+                      <circle cx="0" cy="0" r="3" fill="#38bdf8" />
+                    </g>
+                  </g>
+                  <g transform="translate(88, 116)">
+                    <g>
+                      <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2.8s" repeatCount="indefinite" />
+                      <circle cx="0" cy="0" r="28" fill="#1b3848" stroke="#38bdf8" stroke-width="1.5" />
+                      <circle cx="0" cy="0" r="24" fill="none" stroke="rgba(255,255,255,0.4)" stroke-width="1.5" stroke-dasharray="4,3" />
+                      <circle cx="0" cy="0" r="18" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.2" stroke-dasharray="3,2" />
+                      <circle cx="0" cy="0" r="10" fill="#0f172a" stroke="#38bdf8" stroke-width="1.2" />
+                      <circle cx="0" cy="0" r="3" fill="#38bdf8" />
+                    </g>
+                  </g>
+                </g>
+              </svg>
             ` : ''}
             <img src="${IMAGES.ROBOT_CLEANING}" alt="${cleaningMode.label}" width="124" style="position:relative; z-index:3;" />
           </div>
@@ -1093,66 +1174,7 @@ class DreameVacuumCard extends HTMLElement {
         y: (robotRect.top - contRect.top) + robotRect.height / 2
       };
 
-      // 1. Disegno della scia del pavimento bagnato se mocio attivo
-      if (isMop && mopL && mopR) {
-        const rL = mopL.getBoundingClientRect();
-        const rR = mopR.getBoundingClientRect();
-        const xLeft = rL.left - contRect.left + 3;
-        const xRight = rR.right - contRect.left - 3;
-        const topY = ((rL.top + rR.top) / 2 - contRect.top) + (rL.height * 0.45);
-        const bottomY = canvas.height;
-        const trackWidth = xRight - xLeft;
-
-        if (trackWidth > 10 && bottomY > topY) {
-          // Fondo bagnato scuro lucido
-          const wetGrad = ctx.createLinearGradient(0, topY, 0, bottomY);
-          wetGrad.addColorStop(0, 'rgba(56, 189, 248, 0.12)');
-          wetGrad.addColorStop(0.2, 'rgba(14, 116, 144, 0.22)');
-          wetGrad.addColorStop(0.7, 'rgba(15, 23, 42, 0.35)');
-          wetGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
-          ctx.fillStyle = wetGrad;
-          ctx.beginPath();
-          ctx.rect(xLeft, topY, trackWidth, bottomY - topY);
-          ctx.fill();
-
-          // Riflesso speculare d'acqua limpida
-          const sheen = ctx.createLinearGradient(xLeft, topY, xRight, bottomY);
-          sheen.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
-          sheen.addColorStop(0.3, 'rgba(56, 189, 248, 0.12)');
-          sheen.addColorStop(0.7, 'rgba(255, 255, 255, 0.02)');
-          sheen.addColorStop(1, 'transparent');
-          ctx.fillStyle = sheen;
-          ctx.beginPath();
-          ctx.rect(xLeft, topY, trackWidth, bottomY - topY);
-          ctx.fill();
-
-          // Bordi laterali RIGOROSAMENTE VERTICALI AL 100%
-          const borderGrad = ctx.createLinearGradient(0, topY, 0, bottomY);
-          borderGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
-          borderGrad.addColorStop(0.6, 'rgba(56, 189, 248, 0.18)');
-          borderGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
-          ctx.strokeStyle = borderGrad;
-          ctx.lineWidth = 1;
-          ctx.beginPath();
-          ctx.moveTo(xLeft, topY);
-          ctx.lineTo(xLeft, bottomY);
-          ctx.moveTo(xRight, topY);
-          ctx.lineTo(xRight, bottomY);
-          ctx.stroke();
-
-          // Pozzetta di lucentezza tra i due moci
-          const midX = (xLeft + xRight) / 2;
-          const puddle = ctx.createRadialGradient(midX, topY + 4, 4, midX, topY + 4, trackWidth * 0.4);
-          puddle.addColorStop(0, 'rgba(255, 255, 255, 0.18)');
-          puddle.addColorStop(0.4, 'rgba(56, 189, 248, 0.12)');
-          puddle.addColorStop(1, 'transparent');
-          ctx.fillStyle = puddle;
-          ctx.beginPath();
-          ctx.ellipse(midX, topY + 4, trackWidth * 0.4, 8, 0, 0, Math.PI * 2);
-          ctx.fill();
-        }
-      }
-
+      // Particelle di aspirazione attive se aspirazione richiesta (nessuna scia bagnata a terra)
       // 2. Disegno particelle di aspirazione se aspirazione attiva
       if (isSweep) {
         particles.forEach(p => {
