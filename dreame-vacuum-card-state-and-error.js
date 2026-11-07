@@ -188,7 +188,7 @@ const CARD_STYLES = `
   }
 
   .robot-cleaning-pulse {
-    animation: cleanDynamic 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    animation: cleanDynamic 3.36s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     transform-origin: center center;
     will-change: transform;
   }
@@ -502,7 +502,13 @@ class DreameVacuumCardEditor extends HTMLElement {
             ⬇️ Ritorno alla base
           </button>
           <button type="button" class="test-btn ${currentTestMode === 'docked' ? 'active' : ''}" data-mode="docked">
-            🏠 In base (Docked)
+            🏠 In base (Inattivo)
+          </button>
+          <button type="button" class="test-btn ${currentTestMode === 'docked_wash' ? 'active' : ''}" data-mode="docked_wash">
+            💧 Base: Lavaggio moci
+          </button>
+          <button type="button" class="test-btn ${currentTestMode === 'docked_dry' ? 'active' : ''}" data-mode="docked_dry">
+            ♨️ Base: Asciugatura
           </button>
           <button type="button" class="test-btn ${currentTestMode === 'paused' ? 'active' : ''}" data-mode="paused">
             ⏸️ In pausa
@@ -750,6 +756,12 @@ class DreameVacuumCard extends HTMLElement {
         robotState = 'returning';
       } else if (tm === 'docked') {
         robotState = 'docked';
+      } else if (tm === 'docked_wash') {
+        robotState = 'docked';
+        dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
+      } else if (tm === 'docked_dry') {
+        robotState = 'docked';
+        dockedActivity = { key: 'drying', label: 'Asciugatura' };
       } else if (tm === 'paused') {
         robotState = 'paused';
       } else if (tm === 'err_mops') {
@@ -831,14 +843,28 @@ class DreameVacuumCard extends HTMLElement {
       const rStatusEntityId = this._config.robot_status_entity || 'sensor.dreame_l10_ultra_stato_robot';
       const baseObj = this._hass.states[baseEntityId];
       const rStatusObj = this._hass.states[rStatusEntityId];
-      const rawBase = String(baseObj?.state || rStatusObj?.state || '').trim().toLowerCase();
+      const sBase = String(baseObj?.state || '').trim().toLowerCase();
+      const sRobot = String(rStatusObj?.state || '').trim().toLowerCase();
 
-      if (rawBase === 'drying' || rawBase.includes('dry') || rawBase.includes('asciug')) {
+      const isDrying = sBase === 'drying' || sBase.includes('dry') || sBase.includes('asciug') ||
+                       sRobot === 'drying' || sRobot.includes('dry') || sRobot.includes('asciug');
+      const isWashing = sBase === 'washing' || sBase.includes('wash') || sBase.includes('lavagg') ||
+                        sRobot === 'washing' || sRobot.includes('wash') || sRobot.includes('lavagg');
+      const isEmptying = sBase === 'emptying' || sBase.includes('empty') || sBase.includes('svuot') ||
+                         sRobot === 'emptying' || sRobot.includes('empty') || sRobot.includes('svuot');
+
+      if (isDrying) {
         dockedActivity = { key: 'drying', label: 'Asciugatura' };
-      } else if (rawBase === 'washing' || rawBase.includes('wash') || rawBase.includes('lavagg')) {
-        dockedActivity = { key: 'washing', label: 'Lavaggio' };
-      } else if (rawBase === 'emptying' || rawBase.includes('empty') || rawBase.includes('svuot')) {
+      } else if (isWashing) {
+        dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
+      } else if (isEmptying) {
         dockedActivity = { key: 'emptying', label: 'Svuotamento' };
+      }
+
+      // Se la base e attiva (lavaggio moci, asciugatura o svuotamento), il robot e fisicamente in stazione
+      // anche se vacuum.state segnala ancora 'cleaning' durante il lavaggio intermedio
+      if (dockedActivity) {
+        robotState = 'docked';
       }
     }
 
@@ -925,8 +951,7 @@ class DreameVacuumCard extends HTMLElement {
       let modeIconSvg = '';
       if (cleaningMode.icon === 'both') {
         modeIconSvg = `
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3c2.5 3 4 5 4 8a4 4 0 0 1-8 0c0-3 1.5-5 4-8z"/><path d="M4 14h3M2 18h6"/></svg>
         `;
       } else if (cleaningMode.icon === 'sweep') {
         modeIconSvg = `
@@ -939,10 +964,6 @@ class DreameVacuumCard extends HTMLElement {
       }
       const roomHtml = (currentRoom && robotState === 'cleaning') ? `
         <div class="room-badge" id="room-chip" title="Stanza attuale">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-            <polyline points="9 22 9 12 15 12 15 22"/>
-          </svg>
           <span>${currentRoom}</span>
         </div>
       ` : '';
@@ -1062,8 +1083,8 @@ class DreameVacuumCard extends HTMLElement {
     const isSweep = (modeIcon === 'sweep' || modeIcon === 'both');
     const isMop = (modeIcon === 'mop' || modeIcon === 'both');
 
-    const MAX_PARTICLES = 30;
-    const SPEED_MULT = 0.32;
+    const MAX_PARTICLES = 26;
+    const SPEED_MULT = 0.14;
     const BASE_SIZE = 0.8;
     const ROBOT_RADIUS = 58;
 
@@ -1100,7 +1121,7 @@ class DreameVacuumCard extends HTMLElement {
         this.maxAlpha = 0.70 + Math.random() * 0.25;
         this.color = hues[Math.floor(Math.random() * hues.length)];
         this.life = 0;
-        this.maxLife = 90 + Math.random() * 50;
+        this.maxLife = 160 + Math.random() * 80;
       }
       update(rc) {
         this.px = this.x;
@@ -1127,7 +1148,7 @@ class DreameVacuumCard extends HTMLElement {
 
         const margin = distToCenter - ROBOT_RADIUS;
         if (margin > 12) {
-          this.alpha = Math.min(this.maxAlpha, this.alpha + 0.035);
+          this.alpha = Math.min(this.maxAlpha, this.alpha + 0.02);
         } else {
           this.alpha = Math.max(0, this.alpha * (margin / 12));
         }
