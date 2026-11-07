@@ -188,21 +188,23 @@ const CARD_STYLES = `
   }
 
   .robot-cleaning-pulse {
-    animation: robotGlide 3.6s ease-in-out infinite;
+    animation: cleanDynamic 3.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
     transform-origin: center center;
     will-change: transform;
   }
 
-  @keyframes robotGlide {
-    0% {
-      transform: translateY(0);
-    }
-    50% {
-      transform: translateY(-10px);
-    }
-    100% {
-      transform: translateY(0);
-    }
+  @keyframes cleanDynamic {
+    0% { transform: rotate(0deg) translateY(0); }
+    8% { transform: rotate(0deg) translateY(-14px); }
+    16% { transform: rotate(0deg) translateY(0); }
+    24% { transform: rotate(-25deg) translateY(0); }
+    34% { transform: rotate(-25deg) translateY(-14px); }
+    44% { transform: rotate(-25deg) translateY(0); }
+    54% { transform: rotate(0deg) translateY(0); }
+    64% { transform: rotate(25deg) translateY(0); }
+    74% { transform: rotate(25deg) translateY(-14px); }
+    84% { transform: rotate(25deg) translateY(0); }
+    94%, 100% { transform: rotate(0deg) translateY(0); }
   }
 
   /* Badge Stanza Attuale */
@@ -968,7 +970,7 @@ class DreameVacuumCard extends HTMLElement {
                   </mask>
                 </defs>
                 <g mask="url(#robotBodyMask)">
-                  <g transform="translate(36, 116)">
+                  <g transform="translate(37, 100)">
                     <g>
                       <animateTransform attributeName="transform" type="rotate" from="0" to="-360" dur="2.8s" repeatCount="indefinite" />
                       <circle cx="0" cy="0" r="28" fill="#1b3848" stroke="#38bdf8" stroke-width="1.5" />
@@ -978,7 +980,7 @@ class DreameVacuumCard extends HTMLElement {
                       <circle cx="0" cy="0" r="3" fill="#38bdf8" />
                     </g>
                   </g>
-                  <g transform="translate(88, 116)">
+                  <g transform="translate(87, 100)">
                     <g>
                       <animateTransform attributeName="transform" type="rotate" from="0" to="360" dur="2.8s" repeatCount="indefinite" />
                       <circle cx="0" cy="0" r="28" fill="#1b3848" stroke="#38bdf8" stroke-width="1.5" />
