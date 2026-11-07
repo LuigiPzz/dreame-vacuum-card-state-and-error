@@ -1,98 +1,145 @@
-# Card Home Assistant: errori robot Dreame L10 Ultra
+# Dreame Vacuum Card State and Error
 
-## Obiettivo
-Una card che mostra lo stato del robot e, quando c'e' un errore, un'immagine con un messaggio breve. La card ha **sempre la stessa dimensione**.
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/default)
+[![GitHub Release](https://img.shields.io/github/v/release/LuigiPzz/dreame-vacuum-card-state-and-error?color=00b0ff)](https://github.com/LuigiPzz/dreame-vacuum-card-state-and-error/releases)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-## Entita
-- `sensor.dreame_l10_ultra_errore`: lo stato e' il **testo italiano** dell'errore; il **codice numerico** e' nell'attributo `value` (usare questo nella card).
-- `select.dreame_l10_ultra_modalita_pulizia`: va mostrata solo nello stato lavaggio (aspira / lava / entrambe). **Da fare:** serve l'elenco delle opzioni (attributo `options`) per associare le icone.
-- Integrazione: Tasshack/dreame-vacuum (le immagini non sono nel repository; i codici di errore si trovano in `custom_components/dreame_vacuum/dreame/types.py` e le traduzioni in `translations/it.json`).
+Una custom card per **Home Assistant (Lovelace)** dal design minimale, moderno ed elegante progettata specificamente per robot aspirapolvere e lavapavimenti **Dreame** (ottimizzata per Dreame L10 Ultra / L10s / L20 / X40 e compatibili).
 
-## Mappa errori (vedi anche `mappa_errori.json`)
-| Errore | Chiave | Codici (`value`) | Messaggio | Immagine | Certezza |
-|---|---|---|---|---|---|
-| Panni staccati | `mop_removed` | 69, 70 | I panni si sono staccati | errore_panni_staccati.png | alta |
-| Ruote sollevate | `drop`, `drop_repeat` | 1, 6 | Le ruote non sono a contatto con il suolo | errore_ruote_sollevate.png | alta |
-| Zona non raggiungibile | `route` | 61, 62 | Zona non raggiungibile | errore_zona_non_raggiungibile.png | ipotesi |
-| Asse di lavaggio del mocio | `washboard_not_working` (alternativa `washboard_level`) | 124 (119) | Pulire l'asse di lavaggio del mocio | errore_asse_lavaggio_mocio.png | ipotesi |
-
-Da verificare: quale testo compare per "zona non raggiungibile" e per l'asse di lavaggio, quando l'errore e' attivo (Strumenti per sviluppatori > Stati, oppure cronologia dell'entita).
-
-## Stati normali
-| Stato | Aspetto |
-|---|---|
-| Lavaggio | GIF animata dell'utente (teal, vedi video originale), robot visto dall'alto; **mostra la modalita' di pulizia** (chip) |
-| Ritorno alla base | GIF animata dell'utente, davanti verso il basso, triangolo verso la base; **nessun chip** |
-| In base | Robot grigio fermo davanti alla base, alone grigio; **nessun chip** |
-
-## Decisioni di design
-- Nessun riferimento temporale ("just now", "2 minutes ago").
-- Nessun alone/sfondo verde per gli stati in azione; robot bianco nel mockup.
-- Errori: nessun alone rosso dietro l'immagine; la parte da controllare (panni, ruote, barriera, asse di lavaggio) e' evidenziata in **rosso**; il resto in grigio chiaro. Badge "Errore" + messaggio breve sotto l'immagine.
-- L'immagine di errore **sostituisce** l'animazione quando l'errore e' attivo.
-- Tutte le card hanno la stessa altezza (area immagine e area testo fisse).
-- Sfondo card scuro (#1c1c1c), stile a linee sottili come i disegni del manuale Dreame.
-
-## Immagini (cartella `images/`, PNG con sfondo trasparente)
-- `errore_*.png`: ricolorate per sfondo scuro (linee grigio chiaro, evidenziazione rossa). Nella zona non raggiungibile il percorso blu e' reso grigio e resta rossa solo la barriera.
-- `robot_alto_bianco_fronte_alto.png`: lavaggio. `robot_alto_bianco_fronte_basso.png`: ritorno alla base. `robot_alto_grigio_fronte_alto.png`: in base. `robot_alto_scuro_originale.png`: linee scure per sfondi chiari.
-- Il disegno originale del robot dall'alto ha il davanti (sensore) in basso; negli stati con davanti in alto l'immagine e' ruotata di 180 gradi. La risoluzione e' limitata (circa 240 px di partenza).
-- Per usarle in Home Assistant: copiarle in `/config/www/` (disponibili come `/local/...`).
-
-## Mockup
-`mockup/mockup-card-robot.html`: pagina con tutti gli stati (apribile nel browser).
-
-## Stato del Progetto: Completato ✅
-La card definitiva pronta all'uso è contenuta in:
-`dreame-vacuum-card-state-and-error.js`
-
-### Caratteristiche Implementate
-1. **Dimensioni identiche alla Minimal Washer Card**:
-   - Compatibile al 100% con le Sezioni di Home Assistant: `rows: 5`, `columns: 6` (griglia standard a 5 righe / altezza ~310px).
-   - Area visiva (180px) e area testi/chip a quota fissa: l'altezza della card non subisce mai variazioni o salti tra gli stati.
-2. **Grafica e Immagini Autonome (Zero Configurazione)**:
-   - Tutte le immagini PNG ad alta risoluzione (Robot e 4 schermate di Errore) sono incorporate nativamente in Base64 all'interno del file `.js`.
-   - Non è necessario caricare file aggiuntivi in `/config/www/`: basta installare il singolo file `.js`.
-3. **Mappatura Errori Completa (da `mappa_errori.json`)**:
-   - `69, 70`: **Panni staccati** ("I panni si sono staccati")
-   - `1, 6`: **Ruote sollevate** ("Le ruote non sono a contatto con il suolo")
-   - `61, 62`: **Zona non raggiungibile** ("Zona non raggiungibile")
-   - `124, 119`: **Asse lavaggio mocio** ("Pulire l'asse di lavaggio del mocio")
-   - Fallback intelligente su codici numerici (attributo `value`) e su testo tradotto in italiano.
-4. **Stati Normali e Modalità di Pulizia**:
-   - **Lavaggio**: robot visto dall'alto con animazione discreta + chip con icone vettoriali SVG per le modalità:
-     - Solo aspirazione (icona ventola / flusso)
-     - Solo lavaggio (icona goccia d'acqua)
-     - Aspira e lava (doppia icona)
-   - **Ritorno alla base**: robot con davanti verso il basso e freccia verso la stazione.
-   - **In base (Docked)**: robot su alone circolare scuro con contorno docking station.
-   - **In pausa**: robot con indicatore "In pausa".
-5. **Editor Visuale & Modalità Test**:
-   - Editor nativo (`DreameVacuumCardEditor`) con selettori di entità e pulsanti interattivi per simulare all'istante qualunque stato o errore senza dover azionare fisicamente il robot.
-6. **Interattività**:
-   - Clic sul chip modalità: apre il selettore della modalità di pulizia.
-   - Clic sulla card: apre la scheda dettagliata (`more-info`) del robot aspirapolvere.
+Offre un layout compatto, animazioni fluide ad alta fedeltà, grafica fotorealistica ufficiale e gestione intelligente di tutti gli stati operativi (pulizia, ritorno, ricarica, lavaggio moci, asciugatura ed errori con diagrammi tecnici dedicati).
 
 ---
 
-## Installazione in Home Assistant
+<div align="center">
 
-1. Copia `dreame-vacuum-card-state-and-error.js` nella cartella `/config/www/` del tuo Home Assistant (es. `/config/www/dreame-vacuum-card-state-and-error.js`).
-2. In Home Assistant vai su **Impostazioni** > **Dashboard** > menu tre puntini in alto a destra > **Risorse**.
-3. Clicca su **Aggiungi Risorsa**:
-   - **URL**: `/local/dreame-vacuum-card-state-and-error.js`
-   - **Tipo di risorsa**: `Modulo JavaScript`
-4. Nella tua Dashboard (in particolare in modalità Sezioni o Standard), aggiungi una scheda personalizzata:
+### 📸 Stati di Pulizia e Movimento
+
+| 🧹 Aspira e Lava | 💨 Solo Aspirazione | 💧 Solo Lavaggio |
+| :---: | :---: | :---: |
+| <img src="docs/images/cleaning_both.png" alt="Aspira e lava" width="220" /> | <img src="docs/images/cleaning_sweep.png" alt="Solo aspirazione" width="220" /> | <img src="docs/images/cleaning_mop.png" alt="Solo lavaggio" width="220" /> |
+
+### 📸 Stati in Base Station & Manutenzione
+
+| ⚡ In Ricarica | 💧 Lavaggio Moci | ♨️ Asciugatura |
+| :---: | :---: | :---: |
+| <img src="docs/images/charging.png" alt="In ricarica" width="220" /> | <img src="docs/images/washing_mops.png" alt="Lavaggio moci" width="220" /> | <img src="docs/images/drying.png" alt="Asciugatura" width="220" /> |
+
+| 🏠 In Base (Standby) | ⬇️ Ritorno alla Base | ⏸️ In Pausa |
+| :---: | :---: | :---: |
+| <img src="docs/images/docked.png" alt="In base" width="220" /> | <img src="docs/images/returning.png" alt="Ritorno alla base" width="220" /> | <img src="docs/images/paused.png" alt="In pausa" width="220" /> |
+
+### 📸 Diagnostica Errori Tecnici
+
+| ⚠️ Panni Staccati | ⚠️ Ruote Sollevate | ⚠️ Asse Lavaggio Mocio |
+| :---: | :---: | :---: |
+| <img src="docs/images/err_mops.png" alt="Panni staccati" width="220" /> | <img src="docs/images/err_wheels.png" alt="Ruote sollevate" width="220" /> | <img src="docs/images/err_washboard.png" alt="Asse lavaggio" width="220" /> |
+
+| ⚠️ Zona Non Raggiungibile | ⚠️ Serbatoio Acqua Pulita |
+| :---: | :---: |
+| <img src="docs/images/err_route.png" alt="Zona non raggiungibile" width="220" /> | <img src="docs/images/err_clean_water.png" alt="Acqua pulita" width="220" /> |
+
+</div>
+
+---
+
+## ✨ Caratteristiche Principali
+
+- 📐 **Compatibilità Nativa Sezioni Lovelace (Grid View)**:
+  - Progettata su misura per la griglia standard di Home Assistant: larghezza predefinita a **6 colonne** e altezza a **5 righe standard** (~310px).
+  - Allineamento millimetrico con card native e Mushroom, con quota fissa dell'area grafica per evitare sbalzi o ridimensionamenti tra uno stato e l'altro.
+- 🎨 **Design Minimale & Asset Nativi Integrati**:
+  - Palette dark neutra (`#1c1c1c`) con riflessi e accenti discreti.
+  - Tutte le immagini ufficiali e i diagrammi di errore sono incorporati nativamente in Base64 all'interno del file JavaScript: zero file esterni da scaricare o copiare manualmente.
+- 🔄 **Animazioni Realistiche Calibrate**:
+  - **Movimento di Pulizia Fluido**: oscillazione combinata avanti-sinistra-destra (durata 3.36s) con traiettoria continua priva di pause centrali.
+  - **Moci Rotanti Sagomati**: rotazione a velocità sincrona con maschera SVG che cela il 100% dell'ingombro interno al telaio del robot, mostrando unicamente le mezzelune sporgenti realistiche.
+  - **Micro-particelle di Aspirazione**: flusso calmo e soffuso di particelle cyan fluttuanti verso la bocchetta di aspirazione.
+- 🏷️ **Chip Concisi & Badge Stanza Pulito**:
+  - Icona sempre singola per ogni modalità (glifo fuso per *"Aspira e lava"*).
+  - Indicazione elegante della stanza attiva (`Soggiorno`, `Cucina`, ecc.) in testo pulito senza icone ridondanti.
+- ⚡ **Rilevamento Intelligente delle Attività della Base**:
+  - Mostra la stazione base con chip dedicato anche durante i cicli di pulizia intermedi:
+    - `⚡ In ricarica` (quando la batteria è in carica)
+    - `💧 Lavaggio moci` (durante il ciclo di pulizia dei panni in stazione)
+    - `♨️ Asciugatura` (durante l'asciugatura ad aria calda)
+    - `💨 Svuotamento` (durante l'autosvuotamento polvere)
+    - `🏠 In base` (robot parcheggiato e pronto)
+- 🛠️ **Diagnostica e Mappatura Errori**:
+  - Rileva istantaneamente avvisi e codici numerici traducendoli nel messaggio d'errore corrispondente con diagramma tecnico dell'anatomia inferiore del robot ed evidenziazione dei componenti interessati.
+- 🎛️ **Configuratore Visuale (GUI) con Modalità Test**:
+  - Modifica completa tramite interfaccia grafica di Home Assistant (`ha-form`).
+  - Pulsantiera interattiva integrata nell'editor per testare e visualizzare all'istante qualunque stato o errore senza dover azionare fisicamente il robot.
+
+---
+
+## 📦 Installazione
+
+### Tramite HACS (Consigliato)
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=LuigiPzz&repository=dreame-vacuum-card-state-and-error&category=plugin)
+
+1. Apri **HACS** nella tua istanza di Home Assistant.
+2. Clicca sui **3 puntini in alto a destra** → **Repository personalizzati**.
+3. Incolla l'URL del repository:
+   ```text
+   https://github.com/LuigiPzz/dreame-vacuum-card-state-and-error
+   ```
+4. Seleziona la categoria: **Dashboard** (o *Lovelace*).
+5. Clicca **Aggiungi**, cerca **Dreame Vacuum Card** e premi **Scarica** ⬇️.
+
+### Installazione Manuale
+
+1. Scarica `dreame-vacuum-card-state-and-error.js` dall'[ultima release su GitHub](https://github.com/LuigiPzz/dreame-vacuum-card-state-and-error/releases).
+2. Carica il file nella cartella `/config/www/` del tuo Home Assistant.
+3. In Home Assistant, vai su **Impostazioni** > **Dashboard** > **3 puntini in alto a destra** > **Risorse**.
+4. Clicca su **Aggiungi risorsa**:
+   - **URL:** `/local/dreame-vacuum-card-state-and-error.js`
+   - **Tipo:** `Modulo JavaScript`
+
+---
+
+## ⚙️ Configurazione
+
+### Configurazione Visuale (GUI)
+1. Nella tua dashboard, clicca su **Modifica Dashboard** → **Aggiungi Scheda**.
+2. Cerca e seleziona **Dreame Vacuum Card State and Error**.
+3. Seleziona il tuo robot dal menu a tendina delle entità e (opzionale) i sensori dedicati.
+
+### Esempio YAML Completo
 
 ```yaml
 type: custom:dreame-vacuum-card-state-and-error
 entity: vacuum.dreame_l10_ultra
 error_entity: sensor.dreame_l10_ultra_errore
+water_warning_entity: sensor.dreame_l10_ultra_avviso_acqua_scarsa
 cleaning_mode_entity: select.dreame_l10_ultra_modalita_pulizia
+current_room_entity: sensor.dreame_l10_ultra_stanza_attuale
+base_status_entity: sensor.dreame_l10_ultra_stato_base_lavaggio
+robot_status_entity: sensor.dreame_l10_ultra_stato_robot
 ```
+
+### Parametri di Configurazione
+
+| Parametro | Tipo | Richiesto | Descrizione |
+|---|---|---|---|
+| `entity` | `string` | **Sì** | Entità principale del vacuum (es. `vacuum.dreame_l10_ultra`). |
+| `error_entity` | `string` | No | Sensore errore robot (es. `sensor.dreame_l10_ultra_errore`). |
+| `water_warning_entity` | `string` | No | Sensore avviso acqua (es. `sensor.dreame_l10_ultra_avviso_acqua_scarsa`). |
+| `cleaning_mode_entity` | `string` | No | Selettore modalità di pulizia (`select.dreame_l10_ultra_modalita_pulizia`). |
+| `current_room_entity` | `string` | No | Sensore stanza attuale in pulizia (es. `sensor.dreame_l10_ultra_stanza_attuale`). |
+| `base_status_entity` | `string` | No | Sensore stato base lavaggio (es. `sensor.dreame_l10_ultra_stato_base_lavaggio`). |
+| `robot_status_entity` | `string` | No | Sensore stato operativo robot (es. `sensor.dreame_l10_ultra_stato_robot`). |
 
 ---
 
-## Mockup e Anteprime
-- `mockup/mockup-card-robot.html`: mockup statico originario di tutti gli stati.
-- `mockup/preview-comparison.html`: simulatore interattivo con confronto affiancato tra la **Dreame Vacuum Card** e la **Washer Card** nelle 5 righe standard di Home Assistant.
+## 🛠️ Interattività della Card
+
+* **Clic sulla Card:** Apre la finestra di dettaglio completa (`more-info`) del robot aspirapolvere.
+* **Clic sul Chip Modalità:** Apre il menu di selezione della modalità di pulizia (Aspirazione, Lavaggio, Aspira e Lava).
+* **Clic sul Badge Stanza:** Mostra la scheda informativa della stanza attiva.
+
+---
+
+## 📄 Licenza
+
+Questo progetto è distribuito sotto licenza **MIT**. Consulta il file [LICENSE](LICENSE) per maggiori informazioni.

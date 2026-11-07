@@ -745,6 +745,9 @@ class DreameVacuumCard extends HTMLElement {
     const tm = this._config.test_mode;
 
     if (tm) {
+      if (tm.startsWith('cleaning')) {
+        currentRoom = 'Soggiorno';
+      }
       if (tm === 'cleaning_both') {
         robotState = 'cleaning';
         cleaningMode = { label: 'Aspira e lava', icon: 'both' };
