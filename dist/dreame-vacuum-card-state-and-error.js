@@ -188,52 +188,132 @@ const CARD_STYLES = `
   }
 
   .robot-cleaning-pulse {
-    animation: cleanFloat 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+    animation: robotGlide 3.6s ease-in-out infinite;
     transform-origin: center center;
     will-change: transform;
   }
 
-  @keyframes cleanFloat {
-    /* 1. Avanti e dietro dritto */
+  @keyframes robotGlide {
     0% {
-      transform: rotate(0deg) translateY(0);
+      transform: translateY(0);
     }
-    8% {
-      transform: rotate(0deg) translateY(-14px);
+    50% {
+      transform: translateY(-10px);
     }
-    16% {
-      transform: rotate(0deg) translateY(0);
+    100% {
+      transform: translateY(0);
     }
+  }
 
-    /* 2. Avanti e dietro a 30 gradi a sinistra */
-    24% {
-      transform: rotate(-30deg) translateY(0);
-    }
-    34% {
-      transform: rotate(-30deg) translateY(-14px);
-    }
-    44% {
-      transform: rotate(-30deg) translateY(0);
-    }
+  /* Badge Stanza Attuale */
+  .room-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    font-size: 11px;
+    font-weight: 500;
+    color: #7dd3fc;
+    letter-spacing: 0.2px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    margin-top: 2px;
+  }
 
-    /* 3. Transizione verso destra */
-    54% {
-      transform: rotate(0deg) translateY(0);
-    }
-    64% {
-      transform: rotate(30deg) translateY(0);
-    }
-    74% {
-      transform: rotate(30deg) translateY(-14px);
-    }
-    84% {
-      transform: rotate(30deg) translateY(0);
-    }
+  .room-badge:hover {
+    background: rgba(56, 189, 248, 0.15);
+    border-color: rgba(56, 189, 248, 0.35);
+  }
 
-    /* 4. Ritorno al centro */
-    94%, 100% {
-      transform: rotate(0deg) translateY(0);
-    }
+  .room-badge svg {
+    color: #38bdf8;
+    opacity: 0.9;
+  }
+
+  /* Moci Rotanti Dreame */
+  .mop {
+    position: absolute;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    z-index: 1;
+    pointer-events: none;
+    bottom: -8px;
+  }
+
+  .mop-left {
+    left: 7px;
+  }
+
+  .mop-right {
+    right: 7px;
+  }
+
+  .mop-cloth {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at center, #1b3848 0%, #17526d 55%, #38bdf8 88%, #1f6485 100%);
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5), inset 0 0 8px rgba(0, 0, 0, 0.4);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .mop-cloth::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    right: 4px;
+    bottom: 4px;
+    border-radius: 50%;
+    border: 2px dashed rgba(255, 255, 255, 0.35);
+  }
+
+  .mop-cloth::after {
+    content: "";
+    position: absolute;
+    top: 14px;
+    left: 14px;
+    right: 14px;
+    bottom: 14px;
+    border-radius: 50%;
+    border: 1.5px dotted rgba(255, 255, 255, 0.45);
+    background: radial-gradient(circle at center, #0f172a 0%, #1e293b 80%);
+    box-shadow: 0 0 4px rgba(56, 189, 248, 0.4);
+  }
+
+  .spin-l {
+    animation: spinLeft 2.8s linear infinite;
+  }
+
+  .spin-r {
+    animation: spinRight 2.8s linear infinite;
+  }
+
+  @keyframes spinLeft {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(-360deg); }
+  }
+
+  @keyframes spinRight {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  .robot-shadow-over-mops {
+    position: absolute;
+    bottom: 0px;
+    left: 10px;
+    right: 10px;
+    height: 18px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0) 75%);
+    z-index: 2;
+    pointer-events: none;
   }
 `;
 
@@ -341,9 +421,15 @@ class DreameVacuumCardEditor extends HTMLElement {
       },
       {
         name: 'cleaning_mode_entity',
-        label: 'Selettore Modalità Pulizia (es. select.dreame_l10_ultra_modalita_pulizia)',
+        label: 'Selettore Modalita Pulizia (es. select.dreame_l10_ultra_modalita_pulizia)',
         required: false,
         selector: { entity: { domain: ['select', 'input_select', 'sensor'] } }
+      },
+      {
+        name: 'current_room_entity',
+        label: 'Sensore Stanza Attuale (es. sensor.dreame_l10_ultra_stanza_attuale)',
+        required: false,
+        selector: { entity: { domain: ['sensor'] } }
       }
     ];
   }
@@ -499,7 +585,8 @@ class DreameVacuumCard extends HTMLElement {
       entity: 'vacuum.dreame_l10_ultra',
       error_entity: 'sensor.dreame_l10_ultra_errore',
       water_warning_entity: 'sensor.dreame_l10_ultra_avviso_acqua_scarsa',
-      cleaning_mode_entity: 'select.dreame_l10_ultra_modalita_pulizia'
+      cleaning_mode_entity: 'select.dreame_l10_ultra_modalita_pulizia',
+      current_room_entity: 'sensor.dreame_l10_ultra_stanza_attuale'
     };
   }
 
@@ -603,11 +690,11 @@ class DreameVacuumCard extends HTMLElement {
     const isMop = low.includes('lava') || low.includes('mop');
 
     if (isSweep && isMop) {
-      return { label: raw, icon: 'both' };
+      return { label: 'Aspira e lava', icon: 'both' };
     } else if (isSweep) {
-      return { label: raw, icon: 'sweep' };
+      return { label: 'Solo aspirazione', icon: 'sweep' };
     } else if (isMop) {
-      return { label: raw, icon: 'mop' };
+      return { label: 'Solo lavaggio', icon: 'mop' };
     }
     return { label: raw, icon: 'both' };
   }
@@ -628,6 +715,7 @@ class DreameVacuumCard extends HTMLElement {
     let robotState = 'docked';
     let activeError = null;
     let cleaningMode = { label: 'Aspira e lava', icon: 'both' };
+    let currentRoom = null;
 
     const tm = this._config.test_mode;
 
@@ -711,13 +799,23 @@ class DreameVacuumCard extends HTMLElement {
       if (modeObj) {
         cleaningMode = this._parseCleaningMode(modeObj.state);
       }
+
+      const roomEntityId = this._config.current_room_entity || 'sensor.dreame_l10_ultra_stanza_attuale';
+      const roomObj = this._hass.states[roomEntityId];
+      if (roomObj && roomObj.state) {
+        const rState = String(roomObj.state).trim();
+        if (!['unknown', 'unavailable', '', 'none'].includes(rState.toLowerCase())) {
+          currentRoom = rState;
+        }
+      }
     }
 
     const currentStateString = JSON.stringify({
       tm,
       robotState,
       activeError: activeError ? activeError.key : null,
-      cleaningMode
+      cleaningMode,
+      currentRoom
     });
 
     if (this._lastStateString === currentStateString) {
@@ -783,26 +881,39 @@ class DreameVacuumCard extends HTMLElement {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3c3 4 5 6.5 5 9a5 5 0 0 1-10 0c0-2.5 2-5 5-9z"/></svg>
         `;
       }
+      const roomHtml = (currentRoom && robotState === 'cleaning') ? `
+        <div class="room-badge" id="room-chip" title="Stanza attuale">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+            <polyline points="9 22 9 12 15 12 15 22"/>
+          </svg>
+          <span>${currentRoom}</span>
+        </div>
+      ` : '';
+
       topHtml = `
         <span class="k" id="mode-chip">
           ${modeIconSvg}
           ${cleaningMode.label}
         </span>
+        ${roomHtml}
       `;
-      if (cleaningMode.icon === 'sweep') {
-        visualHtml = `
-          <div class="vacuum-visual-sweep" id="sweepContainer">
-            <canvas class="sweep-canvas" id="sweepCanvas"></canvas>
-            <div class="sweep-robot-wrap robot-cleaning-pulse" id="sweepRobot">
-              <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in aspirazione" width="124" />
-            </div>
+
+      const hasMop = (cleaningMode.icon === 'mop' || cleaningMode.icon === 'both');
+
+      visualHtml = `
+        <div class="vacuum-visual-sweep" id="sweepContainer">
+          <canvas class="sweep-canvas" id="sweepCanvas"></canvas>
+          <div class="sweep-robot-wrap robot-cleaning-pulse" id="sweepRobot">
+            ${hasMop ? `
+              <div class="mop mop-left" id="mopL"><div class="mop-cloth spin-l"></div></div>
+              <div class="mop mop-right" id="mopR"><div class="mop-cloth spin-r"></div></div>
+              <div class="robot-shadow-over-mops"></div>
+            ` : ''}
+            <img src="${IMAGES.ROBOT_CLEANING}" alt="${cleaningMode.label}" width="124" style="position:relative; z-index:3;" />
           </div>
-        `;
-      } else {
-        visualHtml = `
-          <img src="${IMAGES.ROBOT_CLEANING}" alt="Robot in pulizia" width="124" class="robot-cleaning-pulse" />
-        `;
-      }
+        </div>
+      `;
     }
 
     this.shadowRoot.innerHTML = `
@@ -828,15 +939,24 @@ class DreameVacuumCard extends HTMLElement {
       });
     }
 
-    if (robotState === 'cleaning' && cleaningMode.icon === 'sweep') {
-      this._initSweepParticles();
+    const roomChip = this.shadowRoot.getElementById('room-chip');
+    if (roomChip) {
+      const roomEntityId = this._config.current_room_entity || 'sensor.dreame_l10_ultra_stanza_attuale';
+      roomChip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._handleMoreInfo(roomEntityId);
+      });
+    }
+
+    if (robotState === 'cleaning') {
+      this._initCleaningAnimation(cleaningMode.icon);
     } else if (this._particleAnimationId) {
       cancelAnimationFrame(this._particleAnimationId);
       this._particleAnimationId = null;
     }
   }
 
-  _initSweepParticles() {
+  _initCleaningAnimation(modeIcon) {
     if (this._particleAnimationId) {
       cancelAnimationFrame(this._particleAnimationId);
       this._particleAnimationId = null;
@@ -845,6 +965,8 @@ class DreameVacuumCard extends HTMLElement {
     const canvas = this.shadowRoot.getElementById('sweepCanvas');
     const container = this.shadowRoot.getElementById('sweepContainer');
     const robotElem = this.shadowRoot.getElementById('sweepRobot');
+    const mopL = this.shadowRoot.getElementById('mopL');
+    const mopR = this.shadowRoot.getElementById('mopR');
     if (!canvas || !container || !robotElem) return;
 
     const ctx = canvas.getContext('2d');
@@ -853,6 +975,9 @@ class DreameVacuumCard extends HTMLElement {
       canvas.height = container.clientHeight || 200;
     };
     resize();
+
+    const isSweep = (modeIcon === 'sweep' || modeIcon === 'both');
+    const isMop = (modeIcon === 'mop' || modeIcon === 'both');
 
     const MAX_PARTICLES = 30;
     const SPEED_MULT = 0.32;
@@ -952,7 +1077,7 @@ class DreameVacuumCard extends HTMLElement {
       }
     }
 
-    const particles = Array.from({ length: MAX_PARTICLES }, () => new Particle());
+    const particles = isSweep ? Array.from({ length: MAX_PARTICLES }, () => new Particle()) : [];
 
     const animate = () => {
       if (!this.isConnected || !this.shadowRoot.contains(canvas)) {
@@ -961,17 +1086,80 @@ class DreameVacuumCard extends HTMLElement {
       }
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      const robotRect = robotElem.getBoundingClientRect();
       const contRect = container.getBoundingClientRect();
+      const robotRect = robotElem.getBoundingClientRect();
       const rc = {
         x: (robotRect.left - contRect.left) + robotRect.width / 2,
         y: (robotRect.top - contRect.top) + robotRect.height / 2
       };
 
-      particles.forEach(p => {
-        p.update(rc);
-        p.draw(rc);
-      });
+      // 1. Disegno della scia del pavimento bagnato se mocio attivo
+      if (isMop && mopL && mopR) {
+        const rL = mopL.getBoundingClientRect();
+        const rR = mopR.getBoundingClientRect();
+        const xLeft = rL.left - contRect.left + 3;
+        const xRight = rR.right - contRect.left - 3;
+        const topY = ((rL.top + rR.top) / 2 - contRect.top) + (rL.height * 0.45);
+        const bottomY = canvas.height;
+        const trackWidth = xRight - xLeft;
+
+        if (trackWidth > 10 && bottomY > topY) {
+          // Fondo bagnato scuro lucido
+          const wetGrad = ctx.createLinearGradient(0, topY, 0, bottomY);
+          wetGrad.addColorStop(0, 'rgba(56, 189, 248, 0.12)');
+          wetGrad.addColorStop(0.2, 'rgba(14, 116, 144, 0.22)');
+          wetGrad.addColorStop(0.7, 'rgba(15, 23, 42, 0.35)');
+          wetGrad.addColorStop(1, 'rgba(15, 23, 42, 0)');
+          ctx.fillStyle = wetGrad;
+          ctx.beginPath();
+          ctx.rect(xLeft, topY, trackWidth, bottomY - topY);
+          ctx.fill();
+
+          // Riflesso speculare d'acqua limpida
+          const sheen = ctx.createLinearGradient(xLeft, topY, xRight, bottomY);
+          sheen.addColorStop(0, 'rgba(255, 255, 255, 0.08)');
+          sheen.addColorStop(0.3, 'rgba(56, 189, 248, 0.12)');
+          sheen.addColorStop(0.7, 'rgba(255, 255, 255, 0.02)');
+          sheen.addColorStop(1, 'transparent');
+          ctx.fillStyle = sheen;
+          ctx.beginPath();
+          ctx.rect(xLeft, topY, trackWidth, bottomY - topY);
+          ctx.fill();
+
+          // Bordi laterali RIGOROSAMENTE VERTICALI AL 100%
+          const borderGrad = ctx.createLinearGradient(0, topY, 0, bottomY);
+          borderGrad.addColorStop(0, 'rgba(56, 189, 248, 0.35)');
+          borderGrad.addColorStop(0.6, 'rgba(56, 189, 248, 0.18)');
+          borderGrad.addColorStop(1, 'rgba(56, 189, 248, 0)');
+          ctx.strokeStyle = borderGrad;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(xLeft, topY);
+          ctx.lineTo(xLeft, bottomY);
+          ctx.moveTo(xRight, topY);
+          ctx.lineTo(xRight, bottomY);
+          ctx.stroke();
+
+          // Pozzetta di lucentezza tra i due moci
+          const midX = (xLeft + xRight) / 2;
+          const puddle = ctx.createRadialGradient(midX, topY + 4, 4, midX, topY + 4, trackWidth * 0.4);
+          puddle.addColorStop(0, 'rgba(255, 255, 255, 0.18)');
+          puddle.addColorStop(0.4, 'rgba(56, 189, 248, 0.12)');
+          puddle.addColorStop(1, 'transparent');
+          ctx.fillStyle = puddle;
+          ctx.beginPath();
+          ctx.ellipse(midX, topY + 4, trackWidth * 0.4, 8, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      // 2. Disegno particelle di aspirazione se aspirazione attiva
+      if (isSweep) {
+        particles.forEach(p => {
+          p.update(rc);
+          p.draw(rc);
+        });
+      }
 
       this._particleAnimationId = requestAnimationFrame(animate);
     };
