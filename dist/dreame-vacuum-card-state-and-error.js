@@ -503,6 +503,9 @@ class DreameVacuumCardEditor extends HTMLElement {
           <button type="button" class="test-btn ${currentTestMode === 'docked' ? 'active' : ''}" data-mode="docked">
             🏠 In base (Inattivo)
           </button>
+          <button type="button" class="test-btn ${currentTestMode === 'docked_charge' ? 'active' : ''}" data-mode="docked_charge">
+            ⚡ Base: In ricarica
+          </button>
           <button type="button" class="test-btn ${currentTestMode === 'docked_wash' ? 'active' : ''}" data-mode="docked_wash">
             💧 Base: Lavaggio moci
           </button>
@@ -755,6 +758,9 @@ class DreameVacuumCard extends HTMLElement {
         robotState = 'returning';
       } else if (tm === 'docked') {
         robotState = 'docked';
+      } else if (tm === 'docked_charge') {
+        robotState = 'docked';
+        dockedActivity = { key: 'charging', label: 'In ricarica' };
       } else if (tm === 'docked_wash') {
         robotState = 'docked';
         dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
@@ -851,6 +857,8 @@ class DreameVacuumCard extends HTMLElement {
                         sRobot === 'washing' || sRobot.includes('wash') || sRobot.includes('lavagg');
       const isEmptying = sBase === 'emptying' || sBase.includes('empty') || sBase.includes('svuot') ||
                          sRobot === 'emptying' || sRobot.includes('empty') || sRobot.includes('svuot');
+      const isCharging = sRobot === 'charging' || sRobot.includes('charg') || sRobot.includes('ricaric') ||
+                         sBase === 'charging' || sBase.includes('charg') || sBase.includes('ricaric');
 
       if (isDrying) {
         dockedActivity = { key: 'drying', label: 'Asciugatura' };
@@ -858,6 +866,8 @@ class DreameVacuumCard extends HTMLElement {
         dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
       } else if (isEmptying) {
         dockedActivity = { key: 'emptying', label: 'Svuotamento' };
+      } else if (isCharging) {
+        dockedActivity = { key: 'charging', label: 'In ricarica' };
       }
 
       // Se la base e attiva (lavaggio moci, asciugatura o svuotamento), il robot e fisicamente in stazione
@@ -922,6 +932,13 @@ class DreameVacuumCard extends HTMLElement {
         topHtml = `
           <span class="k" style="background: rgba(168, 85, 247, 0.12); border: 1px solid rgba(168, 85, 247, 0.3); color: #d8b4fe;">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round"><path d="M3 8h10a3 3 0 1 0-3-3M3 12h15a3 3 0 1 1-3 3M3 16h8"/></svg>
+            ${dockedActivity.label}
+          </span>
+        `;
+      } else if (dockedActivity && dockedActivity.key === 'charging') {
+        topHtml = `
+          <span class="k" style="background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.3); color: #86efac;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
             ${dockedActivity.label}
           </span>
         `;
