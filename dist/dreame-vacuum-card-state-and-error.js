@@ -832,11 +832,11 @@ class DreameVacuumCard extends HTMLElement {
       const rawBase = String(baseObj?.state || rStatusObj?.state || '').trim().toLowerCase();
 
       if (rawBase === 'drying' || rawBase.includes('dry') || rawBase.includes('asciug')) {
-        dockedActivity = { key: 'drying', label: 'Asciugatura moci' };
+        dockedActivity = { key: 'drying', label: 'Asciugatura' };
       } else if (rawBase === 'washing' || rawBase.includes('wash') || rawBase.includes('lavagg')) {
-        dockedActivity = { key: 'washing', label: 'Lavaggio moci' };
+        dockedActivity = { key: 'washing', label: 'Lavaggio' };
       } else if (rawBase === 'emptying' || rawBase.includes('empty') || rawBase.includes('svuot')) {
-        dockedActivity = { key: 'emptying', label: 'Svuotamento polvere' };
+        dockedActivity = { key: 'emptying', label: 'Svuotamento' };
       }
     }
 
