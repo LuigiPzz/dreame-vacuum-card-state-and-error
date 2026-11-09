@@ -101,6 +101,32 @@ const CARD_STYLES = `
     margin: 0 auto;
   }
 
+  .resolve-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    margin: 6px auto 0;
+    padding: 3px 12px;
+    border-radius: 9999px;
+    background: rgba(240, 149, 149, 0.12);
+    border: 1px solid rgba(240, 149, 149, 0.35);
+    color: #f09595;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    user-select: none;
+    z-index: 10;
+  }
+
+  .resolve-btn:hover {
+    background: rgba(240, 149, 149, 0.25);
+    border-color: #f09595;
+    color: #ffffff;
+    transform: scale(1.02);
+  }
+
   .k {
     display: inline-flex;
     align-items: center;
@@ -565,6 +591,45 @@ class DreameVacuumCard extends HTMLElement {
     this._hass = null;
     this._lastStateString = '';
     this._particleAnimationId = null;
+    this._latchedError = null;
+    this._dismissedErrorKey = null;
+  }
+
+  _getLatchedErrorStorageKey() {
+    return 'dreame_card_latched_err_' + (this._config?.entity || 'default');
+  }
+
+  _saveLatchedError(err) {
+    try {
+      if (err) {
+        sessionStorage.setItem(this._getLatchedErrorStorageKey(), JSON.stringify(err));
+      }
+    } catch (_) {}
+  }
+
+  _clearLatchedError() {
+    try {
+      sessionStorage.removeItem(this._getLatchedErrorStorageKey());
+    } catch (_) {}
+  }
+
+  _loadLatchedError() {
+    try {
+      const raw = sessionStorage.getItem(this._getLatchedErrorStorageKey());
+      return raw ? JSON.parse(raw) : null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  _dismissActiveError() {
+    if (this._latchedError) {
+      this._dismissedErrorKey = this._latchedError.key || this._latchedError.msg;
+    }
+    this._latchedError = null;
+    this._clearLatchedError();
+    this._lastStateString = '';
+    this._render();
   }
 
   disconnectedCallback() {
@@ -804,10 +869,28 @@ class DreameVacuumCard extends HTMLElement {
       }
       const waterObj = waterEntityId ? this._hass.states[waterEntityId] : null;
 
-      activeError = this._parseError(errObj);
-      if (!activeError) {
-        activeError = this._parseWaterWarning(waterObj);
+      const rawError = this._parseError(errObj) || this._parseWaterWarning(waterObj) || (vacObj && String(vacObj.state).toLowerCase() === 'error' ? {
+        key: 'generico',
+        msg: vacObj.attributes?.error || 'Errore robot',
+        img: IMAGES.ERR_ROUTE
+      } : null);
+
+      const rawKey = rawError ? (rawError.key || rawError.msg) : null;
+
+      if (rawError) {
+        if (rawKey !== this._dismissedErrorKey) {
+          this._latchedError = rawError;
+          this._saveLatchedError(rawError);
+        }
+      } else {
+        this._dismissedErrorKey = null;
       }
+
+      if (!this._latchedError) {
+        this._latchedError = this._loadLatchedError();
+      }
+
+      activeError = this._latchedError || null;
 
       if (vacObj) {
         const s = String(vacObj.state).toLowerCase();
@@ -821,13 +904,6 @@ class DreameVacuumCard extends HTMLElement {
           robotState = 'paused';
         } else if (s === 'error') {
           robotState = 'error';
-          if (!activeError) {
-            activeError = {
-              key: 'generico',
-              msg: vacObj.attributes?.error || 'Errore robot',
-              img: IMAGES.ERR_ROUTE
-            };
-          }
         } else {
           robotState = s;
         }
@@ -901,6 +977,10 @@ class DreameVacuumCard extends HTMLElement {
       topHtml = `
         <span class="b">Errore</span>
         <p class="m">${activeError.msg}</p>
+        <button class="resolve-btn" id="resolveBtn" title="Segna come risolto">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Segna come risolto
+        </button>
       `;
       visualHtml = `<img src="${activeError.img}" alt="${activeError.msg}" class="e" />`;
     } else if (robotState === 'returning') {
@@ -1068,6 +1148,14 @@ class DreameVacuumCard extends HTMLElement {
       roomChip.addEventListener('click', (e) => {
         e.stopPropagation();
         this._handleMoreInfo(roomEntityId);
+      });
+    }
+
+    const resolveBtn = this.shadowRoot.getElementById('resolveBtn');
+    if (resolveBtn) {
+      resolveBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        this._dismissActiveError();
       });
     }
 
