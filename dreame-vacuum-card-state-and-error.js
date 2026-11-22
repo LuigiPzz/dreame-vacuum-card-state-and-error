@@ -551,7 +551,7 @@ class DreameVacuumCardEditor extends HTMLElement {
             🚨 Errore: Zona non raggiungibile
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_washboard' ? 'active' : ''}" data-mode="err_washboard">
-            🚨 Errore: Asse lavaggio mocio
+            🚨 Errore: Pulire la base
           </button>
           <button type="button" class="test-btn err ${currentTestMode === 'err_clean_water' ? 'active' : ''}" data-mode="err_clean_water">
             🚨 Errore: Acqua pulita
@@ -703,7 +703,42 @@ class DreameVacuumCard extends HTMLElement {
       return null;
     }
 
-    if (num === 69 || num === 70 || text.includes('panni') || text.includes('mop')) {
+    // 1. Controllo Pulizia Asse / Base di Lavaggio (include clean_mop_pad)
+    if (
+      num === 124 || num === 119 ||
+      text === 'clean_mop_pad' ||
+      text.includes('clean_mop_pad') ||
+      text.includes('asse') ||
+      text.includes('washboard') ||
+      text.includes('pulire la base') ||
+      text.includes('pulire base') ||
+      text.includes('pulizia base') ||
+      text.includes('pulizia asse') ||
+      text.includes('lavaggio base') ||
+      text.includes('stazione') ||
+      (text.includes('clean') && (text.includes('base') || text.includes('washboard') || text.includes('mop'))) ||
+      (text.includes('pulire') && (text.includes('base') || text.includes('lavaggio') || text.includes('mocio')))
+    ) {
+      const msg = (text.includes('asse') || text.includes('clean_mop_pad')) && !text.includes('base')
+        ? "Pulire l'asse di lavaggio del mocio"
+        : "Pulire la base";
+      return {
+        key: 'asse_lavaggio_mocio',
+        msg: msg,
+        img: IMAGES.ERR_WASHBOARD
+      };
+    }
+
+    // 2. Controllo Reale Panni Staccati (SOLO se effettivamente staccati/caduti)
+    if (
+      num === 69 || num === 70 ||
+      text.includes('staccat') ||
+      text.includes('detached') ||
+      text.includes('mop_pad_detached') ||
+      text.includes('mop_detached') ||
+      text.includes('caduti') ||
+      (text.includes('panni') && text.includes('mancant'))
+    ) {
       return {
         key: 'panni_staccati',
         msg: 'I panni si sono staccati',
@@ -724,14 +759,6 @@ class DreameVacuumCard extends HTMLElement {
         key: 'zona_non_raggiungibile',
         msg: 'Zona non raggiungibile',
         img: IMAGES.ERR_ROUTE
-      };
-    }
-
-    if (num === 124 || num === 119 || text.includes('asse') || text.includes('lavaggio') || text.includes('washboard')) {
-      return {
-        key: 'asse_lavaggio_mocio',
-        msg: "Pulire l'asse di lavaggio del mocio",
-        img: IMAGES.ERR_WASHBOARD
       };
     }
 
@@ -844,20 +871,31 @@ class DreameVacuumCard extends HTMLElement {
       } else if (tm === 'err_route') {
         activeError = { key: 'zona_non_raggiungibile', msg: 'Zona non raggiungibile', img: IMAGES.ERR_ROUTE };
       } else if (tm === 'err_washboard') {
-        activeError = { key: 'asse_lavaggio_mocio', msg: "Pulire l'asse di lavaggio del mocio", img: IMAGES.ERR_WASHBOARD };
+        activeError = { key: 'asse_lavaggio_mocio', msg: "Pulire la base", img: IMAGES.ERR_WASHBOARD };
       } else if (tm === 'err_clean_water') {
         activeError = { key: 'serbatoio_acqua_pulita', msg: "Si prega di riempire il serbatoio dell'acqua pulita", img: IMAGES.ERR_CLEAN_WATER };
       }
     } else if (this._hass) {
       const vacObj = this._config.entity ? this._hass.states[this._config.entity] : null;
-      const errObj = this._config.error_entity ? this._hass.states[this._config.error_entity] : null;
+
+      // Risoluzione sensore errore (configurato o auto-rilevato)
+      let errorEntityId = this._config.error_entity;
+      if (!errorEntityId && this._config.entity) {
+        const prefix = this._config.entity.replace(/^vacuum\./, 'sensor.');
+        const inf1 = prefix + '_errore';
+        const inf2 = prefix + '_error';
+        if (this._hass.states[inf1]) errorEntityId = inf1;
+        else if (this._hass.states[inf2]) errorEntityId = inf2;
+      }
+      const errObj = errorEntityId ? this._hass.states[errorEntityId] : null;
+
       const modeObj = this._config.cleaning_mode_entity ? this._hass.states[this._config.cleaning_mode_entity] : null;
 
       // Risoluzione sensore avviso acqua scarsa (configurato o auto-rilevato)
       let waterEntityId = this._config.water_warning_entity;
-      if (!waterEntityId && this._config.error_entity) {
-        const inf1 = this._config.error_entity.replace(/_errore$/, '_avviso_acqua_scarsa');
-        const inf2 = this._config.error_entity.replace(/_error$/, '_low_water_warning');
+      if (!waterEntityId && errorEntityId) {
+        const inf1 = errorEntityId.replace(/_errore$/, '_avviso_acqua_scarsa');
+        const inf2 = errorEntityId.replace(/_error$/, '_low_water_warning');
         if (this._hass.states[inf1]) waterEntityId = inf1;
         else if (this._hass.states[inf2]) waterEntityId = inf2;
       } else if (!waterEntityId && this._config.entity) {
@@ -869,7 +907,62 @@ class DreameVacuumCard extends HTMLElement {
       }
       const waterObj = waterEntityId ? this._hass.states[waterEntityId] : null;
 
-      const rawError = this._parseError(errObj) || this._parseWaterWarning(waterObj) || (vacObj && String(vacObj.state).toLowerCase() === 'error' ? {
+      // Risoluzione sensori stato base e stato robot (configurati o auto-rilevati)
+      let baseEntityId = this._config.base_status_entity;
+      let rStatusEntityId = this._config.robot_status_entity;
+      if (this._config.entity) {
+        const prefix = this._config.entity.replace(/^vacuum\./, 'sensor.');
+        if (!baseEntityId) {
+          const inf1 = prefix + '_stato_base_lavaggio';
+          const inf2 = prefix + '_self_wash_base_status';
+          if (this._hass.states[inf1]) baseEntityId = inf1;
+          else if (this._hass.states[inf2]) baseEntityId = inf2;
+        }
+        if (!rStatusEntityId) {
+          const inf1 = prefix + '_stato_robot';
+          const inf2 = prefix + '_status';
+          if (this._hass.states[inf1]) rStatusEntityId = inf1;
+          else if (this._hass.states[inf2]) rStatusEntityId = inf2;
+        }
+      }
+      baseEntityId = baseEntityId || 'sensor.dreame_l10_ultra_stato_base_lavaggio';
+      rStatusEntityId = rStatusEntityId || 'sensor.dreame_l10_ultra_stato_robot';
+      const baseObj = this._hass.states[baseEntityId];
+      const rStatusObj = this._hass.states[rStatusEntityId];
+      const sBase = String(baseObj?.state || '').trim().toLowerCase();
+      const sRobot = String(rStatusObj?.state || '').trim().toLowerCase();
+
+      // Rilevamento richiesta pulizia base / washboard da sBase o sRobot
+      const isBaseCleaningAlert = (
+        sBase === 'clean_washboard' || sBase === 'cleaning_washboard' || sBase === 'washboard_cleaning' || sBase === 'clean_mop_pad' ||
+        sBase === 'pulire_base' || sBase === 'pulizia_base' || sBase.includes('pulire la base') || sBase.includes('pulire_base') || sBase.includes('clean_mop_pad') ||
+        sRobot === 'clean_washboard' || sRobot === 'cleaning_washboard' || sRobot === 'washboard_cleaning' || sRobot === 'clean_mop_pad' ||
+        sRobot === 'pulire_base' || sRobot === 'pulizia_base' || sRobot.includes('pulire la base') || sRobot.includes('pulire_base') || sRobot.includes('clean_mop_pad')
+      );
+      const baseCleanError = isBaseCleaningAlert ? {
+        key: 'asse_lavaggio_mocio',
+        msg: 'Pulire la base',
+        img: IMAGES.ERR_WASHBOARD
+      } : null;
+
+      // Ricerca automatica di altri sensori di avviso (es. avviso_base, alert_*, ecc.)
+      let extraWarningError = null;
+      if (this._config.entity) {
+        const prefix = this._config.entity.replace(/^vacuum\./, 'sensor.');
+        for (const [entityId, stateObj] of Object.entries(this._hass.states)) {
+          if (!entityId.startsWith(prefix)) continue;
+          if (entityId === waterEntityId || entityId === errorEntityId || entityId === baseEntityId || entityId === rStatusEntityId) continue;
+          if (entityId.includes('avviso') || entityId.includes('warning') || entityId.includes('alert')) {
+            const parsed = this._parseError(stateObj) || this._parseWaterWarning(stateObj);
+            if (parsed) {
+              extraWarningError = parsed;
+              break;
+            }
+          }
+        }
+      }
+
+      const rawError = this._parseError(errObj) || this._parseWaterWarning(waterObj) || extraWarningError || baseCleanError || (vacObj && String(vacObj.state).toLowerCase() === 'error' ? {
         key: 'generico',
         msg: vacObj.attributes?.error || 'Errore robot',
         img: IMAGES.ERR_ROUTE
@@ -923,21 +1016,18 @@ class DreameVacuumCard extends HTMLElement {
       }
 
       // Rilevamento attivita della base (asciugatura, lavaggio, svuotamento)
-      const baseEntityId = this._config.base_status_entity || 'sensor.dreame_l10_ultra_stato_base_lavaggio';
-      const rStatusEntityId = this._config.robot_status_entity || 'sensor.dreame_l10_ultra_stato_robot';
-      const baseObj = this._hass.states[baseEntityId];
-      const rStatusObj = this._hass.states[rStatusEntityId];
-      const sBase = String(baseObj?.state || '').trim().toLowerCase();
-      const sRobot = String(rStatusObj?.state || '').trim().toLowerCase();
-
       const isDrying = sBase === 'drying' || sBase.includes('dry') || sBase.includes('asciug') ||
                        sRobot === 'drying' || sRobot.includes('dry') || sRobot.includes('asciug');
-      const isWashing = sBase === 'washing' || sBase.includes('wash') || sBase.includes('lavagg') ||
-                        sRobot === 'washing' || sRobot.includes('wash') || sRobot.includes('lavagg');
+      const isWashing = (!isBaseCleaningAlert) && (
+                        sBase === 'washing' || sBase.includes('lavagg') || (sBase.includes('wash') && !sBase.includes('washboard')) ||
+                        sRobot === 'washing' || sRobot.includes('wash') || (sRobot.includes('wash') && !sRobot.includes('washboard'))
+                      );
       const isEmptying = sBase === 'emptying' || sBase.includes('empty') || sBase.includes('svuot') ||
                          sRobot === 'emptying' || sRobot.includes('empty') || sRobot.includes('svuot');
-      const isCharging = sRobot === 'charging' || sRobot.includes('charg') || sRobot.includes('ricaric') ||
-                         sBase === 'charging' || sBase.includes('charg') || sBase.includes('ricaric');
+      const isCharging = (
+        (sRobot === 'charging' || ((sRobot.includes('charg') || sRobot.includes('ricaric')) && !sRobot.includes('complet'))) ||
+        (sBase === 'charging' || ((sBase.includes('charg') || sBase.includes('ricaric')) && !sBase.includes('complet')))
+      );
 
       if (isDrying) {
         dockedActivity = { key: 'drying', label: 'Asciugatura' };
